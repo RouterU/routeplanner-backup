@@ -582,6 +582,41 @@ body{background:var(--bg0);color:var(--text1);}
 .manifest-selection-bar select{background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text1);font-size:10px;font-family:'Sora',sans-serif;padding:4px 6px;min-width:180px;}
 @media (max-width:900px){.left-panel.expanded-workspace{width:min(86vw,760px);}}
 </style>
+
+<style id="vectorops-ui-alignment-hotfix">
+/* 2026-09-04 targeted UI hotfix: keep the full toolbar visible and eliminate Leaflet tile seams at fractional browser zoom. */
+.topbar{gap:5px;padding-left:8px;padding-right:8px;}
+.topbar>.topbar-group{gap:3px;flex-shrink:0;}
+.topbar-actions{gap:3px;min-width:0;flex:1 1 auto;justify-content:flex-end;}
+.topbar .btn{padding:4px 7px;font-size:10px;gap:3px;}
+.topbar .btn svg{width:11px;height:11px;}
+.topbar .topbar-label{font-size:9px;}
+.topbar .date-input{width:126px;}
+.topbar .time-input{width:74px;}
+.topbar .radius-input{width:56px;}
+.topbar .bhl-menu-wrap{flex-shrink:0;}
+.topbar button[onclick="exportExcel()"]{flex-shrink:0;}
+@media (max-width:2050px){
+  .topbar{gap:3px;padding-left:6px;padding-right:6px;}
+  .topbar-sep{margin:0 1px;}
+  .logo{font-size:12px;}
+  .logo small{font-size:8px;margin-left:2px;}
+  .topbar .btn{padding:4px 6px;font-size:9px;gap:2px;}
+  .topbar .btn svg{width:10px;height:10px;}
+  .topbar .topbar-label{font-size:8px;}
+  .topbar .date-input,.topbar .time-input,.topbar .radius-input{font-size:10px;padding:4px 5px;}
+  .topbar .date-input{width:122px;}
+  .topbar .time-input{width:70px;}
+  .topbar .radius-input{width:52px;}
+}
+/* Fractional browser zoom can expose 1px raster-tile gaps in Chromium/Edge.
+   Oversizing raster tiles by one CSS pixel lets adjacent tiles overlap slightly instead of showing seams. */
+.leaflet-container img.leaflet-tile{
+  width:257px!important;
+  height:257px!important;
+  mix-blend-mode:normal!important;
+}
+</style>
 </head>
 <body>
 
@@ -669,7 +704,7 @@ body{background:var(--bg0);color:var(--text1);}
         <button class="bhl-menu-item" onclick="bhlExtrasExportPlaceholder()"><span>Export</span><span>⬇</span></button>
       </div>
     </div>
-<button class="btn success" onclick="exportExcel()">
+<button class="btn success" id="export-btn" onclick="exportExcel()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
       Export
     </button>
@@ -1491,6 +1526,14 @@ window.addEventListener('DOMContentLoaded',()=>{
     attribution:'Tiles &copy; Esri, Maxar, Earthstar Geographics, and the GIS User Community'
   });
   darkTileLayer.addTo(map);
+  // Keep Leaflet aligned after browser zoom / viewport scaling changes.
+  let vectorOpsMapResizeTimer=null;
+  const refreshVectorOpsMapSize=()=>{
+    clearTimeout(vectorOpsMapResizeTimer);
+    vectorOpsMapResizeTimer=setTimeout(()=>{ if(map) map.invalidateSize({pan:false,animate:false}); },80);
+  };
+  window.addEventListener('resize',refreshVectorOpsMapSize);
+  if(window.visualViewport) window.visualViewport.addEventListener('resize',refreshVectorOpsMapSize);
   map.on('click',ev=>{
     if(streetViewPickMode){
       openStreetViewAt(ev.latlng.lat,ev.latlng.lng);
